@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satelit & Telephony Tracking System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            red: '#ef4444',
+                            yellow: '#f59e0b',
+                            dark: '#0f172a',
+                            border: '#334155'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .font-mono-custom {
+            font-family: 'Fira Code', monospace;
+        }
+        /* Custom animation for scanning grid */
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        .scan-line {
+            animation: scan 3s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-red-500/30 selection:text-red-200">
+
+    <!-- Header / Nav -->
+    <header class="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></div>
+                <span class="font-mono-custom text-sm font-bold tracking-widest text-slate-200">SYS_LOCATE://PRO-V4.2</span>
+            </div>
+            <div class="text-xs text-red-500 font-mono-custom bg-red-500/10 px-3 py-1 rounded border border-red-500/20">
+                MODE AKTIF
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-4xl w-full mx-auto px-4 py-8 flex flex-col justify-center">
+        
+        <!-- Search Form Card -->
+        <div id="searchCard" class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 md:p-8 backdrop-blur-sm shadow-2xl transition-all duration-300">
+            <div class="text-center mb-8">
+                <div class="inline-flex p-3 bg-red-500/10 text-red-500 rounded-2xl mb-4 border border-red-500/20">
+                    <i class="fa-solid fa-satellite-dish text-3xl animate-pulse"></i>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white">Sistem Pencari & Pelacak Seluler Global</h1>
+                <p class="text-sm text-slate-400 mt-2 max-w-md mx-auto">
+                    Masukkan nomor telepon target untuk melakukan analisis HLR (Home Location Register) dan penentuan posisi triangulasi BTS.
+                </p>
+            </div>
+
+            <form id="trackingForm" class="space-y-4">
+                <div>
+                    <label for="phoneInput" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Nomor Telepon Target</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500 font-mono-custom">
+                            <i class="fa-solid fa-crosshairs text-red-500"></i>
+                        </span>
+                        <input type="text" id="phoneInput" required
+                            class="w-full bg-slate-950 border border-slate-800 focus:border-red-500 focus:ring-1 focus:ring-red-500 rounded-xl py-4 pl-12 pr-4 text-white font-mono-custom text-lg placeholder-slate-600 transition-all outline-none"
+                            placeholder="Enter Your Number">
+                    </div>
+                    <span class="text-[11px] text-slate-500 mt-1.5 block">
+                        *Sistem berjalan otomatis jika nomor target dimasukkan sesuai instruksi skenario.
+                    </span>
+                </div>
+
+                <button type="submit" 
+                    class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-xl transition duration-200 shadow-lg shadow-red-900/20 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-bolt"></i> Inisiasi Pelacakan
+                </button>
+            </form>
+        </div>
+
+        <!-- Scanning / Loading Animation Screen -->
+        <div id="scanningScreen" class="hidden bg-slate-900/80 border border-slate-800 rounded-2xl p-8 text-center backdrop-blur-md relative overflow-hidden">
+            <!-- Simulated radar grid backgound -->
+            <div class="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#ef4444_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            
+            <div class="relative z-10 space-y-6 py-8">
+                <div class="relative w-24 h-24 mx-auto">
+                    <div class="absolute inset-0 rounded-full border-2 border-red-500/20"></div>
+                    <div class="absolute inset-0 rounded-full border-2 border-t-red-500 animate-spin"></div>
+                    <div class="absolute inset-2 rounded-full border border-dashed border-red-500/30 animate-reverse-spin"></div>
+                    <div class="absolute inset-0 flex items-center justify-center text-red-500">
+                        <i class="fa-solid fa-network-wired text-xl"></i>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <h3 class="text-lg font-bold tracking-wider text-red-500 uppercase font-mono-custom" id="scanStepTitle">Menghubungkan ke BTS Terdekat...</h3>
+                    <p class="text-xs text-slate-400 font-mono-custom max-w-sm mx-auto" id="scanStepLogs">Menunggu respon sinyal HLR...</p>
+                </div>
+
+                <!-- Simulation terminal outputs -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-left font-mono-custom text-xs text-emerald-500 space-y-1 h-32 overflow-y-auto" id="terminalLogs">
+                    <div class="text-slate-500">&gt; Menunggu sinyal...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tracking Results (Blurred / Censored) -->
+        <div id="resultsScreen" class="hidden space-y-6">
+            <div class="bg-slate-900/60 border border-red-500/30 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-sm">
+                
+                <!-- Alert Header -->
+                <div class="bg-red-950/40 border-b border-red-900/30 px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-red-500 font-bold text-sm uppercase tracking-wider font-mono-custom">
+                        <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                        Data Pelacakan Ditemukan
+                    </div>
+                    <span class="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded font-mono-custom">Terkunci</span>
+                </div>
+
+                <!-- Results Information Grid -->
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+                    <!-- Blur Overlay for lock simulation -->
+                    <div class="absolute inset-0 bg-slate-950/40 backdrop-blur-[6px] z-10 flex items-center justify-center p-4">
+                        <!-- Interstitial info box -->
+                        <div class="bg-slate-900/90 border border-slate-800 p-6 rounded-xl max-w-sm text-center shadow-2xl">
+                            <i class="fa-solid fa-lock text-3xl text-red-500 mb-3 animate-bounce"></i>
+                            <h4 class="text-base font-bold text-white mb-2">Akses Terkunci (Sensor Otomatis)</h4>
+                            <p class="text-xs text-slate-400">
+                                Sistem mendeteksi nomor kritis. Data pelacakan dienkripsi dan disensor secara otomatis demi keamanan protokol.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Blurred Data Content -->
+                    <div class="space-y-4 font-mono-custom text-sm">
+                        <div class="border-b border-slate-800/80 pb-2">
+                            <div class="text-slate-500 text-xs">NOMOR TARGET</div>
+                            <div class="text-white font-bold" id="resTargetNum">+62 811-XXXX-XXX</div>
+                        </div>
+                        <div class="border-b border-slate-800/80 pb-2">
+                            <div class="text-slate-500 text-xs">OPERATOR</div>
+                            <div class="text-white">TELKOMSEL INDONESIA</div>
+                        </div>
+                        <div class="border-b border-slate-800/80 pb-2">
+                            <div class="text-slate-500 text-xs">WILAYAH HLR</div>
+                            <div class="text-white">JAWA TENGAH / SEMARANG</div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 font-mono-custom text-sm">
+                        <div class="border-b border-slate-800/80 pb-2">
+                            <div class="text-slate-500 text-xs">KOORDINAT PRESISI</div>
+                            <div class="text-white">-7.02534, 110.43125 (Estimasi)</div>
+                        </div>
+                        <div class="border-b border-slate-800/80 pb-2">
+                            <div class="text-slate-500 text-xs">NOMOR IMEI</div>
+                            <div class="text-white">35823109*******</div>
+                        </div>
+                        <div class="border-b border-slate-800/80 pb-2">
+                            <div class="text-slate-500 text-xs">PERANGKAT TERAKHIR</div>
+                            <div class="text-white">SAMSUNG GALAXY S23 ULTRA</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-900 bg-slate-950 py-4 text-center">
+        <p class="text-[11px] text-slate-600 font-mono-custom">
+            GEOTRACK &copy; 2026 
+        </p>
+    </footer>
+
+    <!-- Modern Cyber Ransomware Simulator Pop-up (Modal) -->
+    <div id="ransomModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="bg-slate-900 border-2 border-red-600 rounded-2xl max-w-md w-full overflow-hidden shadow-[0_0_50px_rgba(239,68,68,0.3)] transform scale-95 opacity-0 transition-all duration-300" id="modalBox">
+            
+            <!-- Modal Header -->
+            <div class="bg-red-600 px-6 py-4 flex items-center gap-3 text-slate-950">
+                <i class="fa-solid fa-triangle-exclamation text-2xl animate-pulse"></i>
+                <div>
+                    <h3 class="font-black text-lg tracking-wider font-mono-custom uppercase leading-none">Akses Terkunci!</h3>
+                    <span class="text-[10px] font-bold tracking-widest uppercase opacity-75">Sistem Memerlukan Kunci Deskripsi</span>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6 space-y-6">
+                <!-- Text Alert -->
+                <div class="text-center space-y-2">
+                    <p class="text-sm text-slate-300 font-semibold">
+                        pembayaran 150.000 sebelumnya telah berhasil mendapatkan lokasi dan koordinat target. tetapi pelacakan terhambat oleh sistem keamanan enkripsi
+                    </p>
+                    <p class="text-xs text-slate-400">
+                        Untuk membuka sensor enkripsi dan menampilkan lokasi langsung satelit seperti koordinat target secara utuh, silakan tebus kunci dekripsi instan.
+                    </p>
+                </div>
+
+                <!-- Price Box -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center relative overflow-hidden">
+                    <div class="absolute -top-10 -right-10 w-24 h-24 bg-red-500/10 rounded-full blur-xl"></div>
+                    <span class="text-[10px] text-slate-500 block uppercase tracking-widest font-mono-custom">Biaya Kunci Dekripsi</span>
+                    <span class="text-3xl font-black text-red-500 font-mono-custom">Rp 125.000</span>
+                </div>
+
+                <!-- Payment Instructions -->
+                <div class="space-y-3 bg-slate-950/50 p-4 rounded-xl border border-slate-800/80">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2 py-0.5 bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[10px] font-bold rounded font-mono-custom">METODE PEMBAYARAN: DANA</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between bg-slate-950 px-3 py-2.5 rounded-lg border border-slate-800">
+                        <div class="text-left">
+                            <div class="text-[9px] text-slate-500 font-mono-custom">NOMOR TUJUAN DANA</div>
+                            <div class="font-mono-custom text-sm font-bold text-slate-200" id="danaNum">085758306037</div>
+                        </div>
+                        <button onclick="copyToClipboard()" class="text-xs text-red-500 hover:text-red-400 font-bold px-3 py-1.5 hover:bg-red-500/10 rounded-md transition border border-red-500/20">
+                            <i class="fa-regular fa-copy mr-1"></i> Salin
+                        </button>
+                    </div>
+                    <div id="copyToast" class="hidden text-center text-[10px] text-emerald-400 font-mono-custom animate-pulse">✓ Nomor DANA berhasil disalin!</div>
+                </div>
+
+                <!-- Sim Countdown Timer -->
+                <div class="flex items-center justify-between text-xs text-slate-400 font-mono-custom px-1">
+                    <span>Masa Berlaku Kunci:</span>
+                    <span class="text-yellow-500 font-bold" id="timer">09:59</span>
+                </div>
+
+                                 <button id="verifyBtn" onclick="simulateVerification()" 
+                        class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-lg text-xs tracking-wider uppercase font-mono-custom transition duration-200">
+                        Konfirmasi Pembayaran
+                    </button>
+                    <p id="verifyStatus" class="hidden text-[10px] text-center font-mono-custom mt-2"></p>
+                </div>
+
+                <!-- Simulated Warning / Disclaimer Link -->
+                <div class="text-center">
+                    <button onclick="closeModalSim()" class="text-[10px] text-slate-500 hover:text-slate-400 underline transition">
+                        Batal 
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification System -->
+    <div id="uiToast" class="fixed bottom-6 right-6 z-50 bg-slate-900 border border-red-500/30 text-white px-4 py-3 rounded-lg shadow-xl text-xs font-mono-custom flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300">
+        <i class="fa-solid fa-circle-exclamation text-red-500"></i>
+        <span id="uiToastText">Pesan default</span>
+    </div>
+
+    <!-- Script Logika Simulasi -->
+    <script>
+        const trackingForm = document.getElementById('trackingForm');
+        const phoneInput = document.getElementById('phoneInput');
+        const searchCard = document.getElementById('searchCard');
+        const scanningScreen = document.getElementById('scanningScreen');
+        const resultsScreen = document.getElementById('resultsScreen');
+        const ransomModal = document.getElementById('ransomModal');
+        const modalBox = document.getElementById('modalBox');
+        const scanStepTitle = document.getElementById('scanStepTitle');
+        const scanStepLogs = document.getElementById('scanStepLogs');
+        const terminalLogs = document.getElementById('terminalLogs');
+
+        // Target matching sequence +62 811-2646-911
+        const targetNumber = "+62 811-2646-911";
+
+        // Logging messages sequence for the tracking effect
+        const logSequence = [
+            { text: "> Inisialisasi koneksi satelit GPS-L1/L2...", delay: 200 },
+            { text: "> Membaca basis data HLR regional ID (+62)...", delay: 800 },
+            { text: "> Melakukan ping ke Base Transceiver Station (BTS)...", delay: 1400 },
+            { text: "> BTS merespon: Sinyal kuat terdeteksi.", delay: 2000 },
+            { text: "> Mengumpulkan estimasi koordinat lokasi...", delay: 2600 },
+            { text: "> Membaca informasi identifikasi perangkat (IMEI & IMSI)...", delay: 3200 },
+            { text: "> Melakukan kalkulasi enkripsi data...", delay: 3800 },
+            { text: "> [PERINGATAN] Enkripsi protokol keamanan terdeteksi!", delay: 4400 },
+            { text: "> Mengunci output data untuk mencegah kebocoran...", delay: 4800 }
+        ];
+
+        trackingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const inputVal = phoneInput.value.trim();
+
+            // Sembunyikan form awal, tampilkan animasi scanning
+            searchCard.classList.add('hidden');
+            scanningScreen.classList.remove('hidden');
+
+            // Jalankan pencetakan log simulasi
+            terminalLogs.innerHTML = "";
+            let currentLogIndex = 0;
+
+            function printNextLog() {
+                if (currentLogIndex < logSequence.length) {
+                    const log = logSequence[currentLogIndex];
+                    setTimeout(() => {
+                        const logEl = document.createElement('div');
+                        logEl.innerText = log.text;
+                        
+                        // Berikan warna khusus untuk baris peringatan
+                        if (log.text.includes('[PERINGATAN]')) {
+                            logEl.className = "text-red-500 font-bold";
+                            scanStepTitle.innerText = "Dekripsi Terhambat!";
+                            scanStepTitle.className = "text-lg font-bold tracking-wider text-yellow-500 uppercase font-mono-custom";
+                        }
+                        
+                        terminalLogs.appendChild(logEl);
+                        terminalLogs.scrollTop = terminalLogs.scrollHeight; // Auto scroll down
+                        
+                        // Perbarui teks sub-log utama
+                        scanStepLogs.innerText = log.text.replace('> ', '');
+
+                        currentLogIndex++;
+                        printNextLog();
+                    }, log.delay - (currentLogIndex > 0 ? logSequence[currentLogIndex-1].delay : 0));
+                } else {
+                    // Akhir dari log, tampilkan hasil yang disensor
+                    setTimeout(() => {
+                        scanningScreen.classList.add('hidden');
+                        
+                        // Perbarui nomor target di layar hasil berdasarkan input pengguna
+                        document.getElementById('resTargetNum').innerText = inputVal;
+                        resultsScreen.classList.remove('hidden');
+
+                        // Munculkan Ransomware Modal setelah jeda singkat (1.5 detik)
+                        setTimeout(() => {
+                            openRansomModal();
+                        }, 1500);
+
+                    }, 1000);
+                }
+            }
+
+            printNextLog();
+        });
+
+        // Modal triggers
+        function openRansomModal() {
+            ransomModal.classList.remove('hidden');
+            setTimeout(() => {
+                modalBox.classList.remove('scale-95', 'opacity-0');
+                modalBox.classList.add('scale-100', 'opacity-100');
+            }, 50);
+            startCountdown();
+        }
+
+        function closeModalSim() {
+            modalBox.classList.remove('scale-100', 'opacity-100');
+            modalBox.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                ransomModal.classList.add('hidden');
+                // Beritahu pengguna melalui custom toast bahwa ini hanyalah simulasi
+                showToast(" Dibatalkan. Kembali ke form awal.");
+                setTimeout(() => {
+                    resultsScreen.classList.add('hidden');
+                    searchCard.classList.remove('hidden');
+                    phoneInput.value = "";
+                }, 1500);
+            }, 300);
+        }
+
+        // Clip board copy fallback
+        function copyToClipboard() {
+            const tempInput = document.createElement('input');
+            tempInput.value = "085758306037";
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            const toastMsg = document.getElementById('copyToast');
+            toastMsg.classList.remove('hidden');
+            setTimeout(() => {
+                toastMsg.classList.add('hidden');
+            }, 2000);
+        }
+
+        // Custom Toast System
+        function showToast(message) {
+            const toast = document.getElementById('uiToast');
+            document.getElementById('uiToastText').innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 4000);
+        }
+
+        // 10 minutes simulation timer
+        let timeLeft = 599; 
+        let timerInterval;
+        function startCountdown() {
+            if (timerInterval) clearInterval(timerInterval);
+            const timerDisplay = document.getElementById('timer');
+            
+            timerInterval = setInterval(() => {
+                let minutes = Math.floor(timeLeft / 60);
+                let seconds = timeLeft % 60;
+                
+                minutes = minutes < 10 ? '0' + minutes : minutes;
+                seconds = seconds < 10 ? '0' + seconds : seconds;
+                
+                timerDisplay.innerText = `${minutes}:${seconds}`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timerDisplay.innerText = "KADALUWARSA";
+                }
+                timeLeft--;
+            }, 1000);
+        }
+
+        // Simulate Pembayaran Verification
+        function simulateVerification() {
+            const refInput = document.getElementById('refInput').value.trim();
+            const verifyStatus = document.getElementById('verifyStatus');
+            const verifyBtn = document.getElementById('verifyBtn');
+
+            if (!refInput) {
+                verifyStatus.innerText = "Silakan masukkan nomor referensi/ID transaksi DANA terlebih dahulu.";
+                verifyStatus.className = "text-[10px] text-center font-mono-custom mt-2 text-yellow-500 animate-pulse";
+                verifyStatus.classList.remove('hidden');
+                return;
+            }
+
+            verifyBtn.disabled = true;
+            verifyBtn.innerText = "Memverifikasi Transaksi...";
+            verifyStatus.innerText = "Menghubungkan ke gateway API DANA...";
+            verifyStatus.className = "text-[10px] text-center font-mono-custom mt-2 text-slate-400 animate-pulse";
+            verifyStatus.classList.remove('hidden');
+
+            setTimeout(() => {
+                // Skenario: Menyatakan kode sukses simulasi
+                verifyStatus.innerText = "VERIFIKASI BERHASIL! ";
+                verifyStatus.className = "text-[10px] text-center font-mono-custom mt-2 text-emerald-400 font-bold";
+                
+                setTimeout(() => {
+                    alert(" Selesai:\nPembayaran terverifikasi. Halaman akan mereset.");
+                    location.reload();
+                }, 2000);
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
+
